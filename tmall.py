@@ -31,23 +31,31 @@ def _get_col_datatypes(fin):
 
 
 def insert_ids(f):
+    """
+    Inser SKUID, ID, RPC in the CSV rows
+    :param f: a csv.reader object
+    :return: generator
+    """
     for line in f:
-        #yield line.encode("ascii", "xmlcharrefreplace").decode("ascii")
         url = line[3]
-        import re
-        skuid_search = re.search('skuId=(?P<skuId>[0-9]+)', url)
-        id_search = re.search('id=(?P<id>[0-9]+)', url)
-        skuid = skuid_search.group('skuId') if skuid_search else None
-        id = id_search.group('id') if id_search else None
-        rpc = skuid if skuid else id
+        skuid, id, rpc = parse_url(url)
         line.insert(23, skuid)
         line.insert(24, id)
         line.insert(25, rpc)
         yield line
 
 
+def parse_url(url):
+    import re
+    skuid_search = re.search('skuId=(?P<skuId>[0-9]+)', url)
+    id_search = re.search('id=(?P<id>[0-9]+)', url)
+    skuid = skuid_search.group('skuId') if skuid_search else None
+    id = id_search.group('id') if id_search else None
+    rpc = skuid if skuid else id
+    return skuid, id, rpc
 
-def csvToDb(csvFile, outputToFile = False):
+
+def csv_to_db(csvFile, outputToFile = False):
     # TODO: implement output to file
 
     with open(csvFile,mode='rb') as fin:
@@ -90,8 +98,55 @@ def csvToDb(csvFile, outputToFile = False):
         cur.executemany(stmt, insert_ids(reader))
         con.commit()
 
+
+def analyse(csv_file_path):
+    con = sqlite3.connect("f:/dev/csv.db")
+    cur = con.cursor()
+
+    output = []
+    with open(csv_file_path, 'rb') as fin:
+        reader = csv.reader(fin)
+        header = reader.next() # skip header
+        header.insert(23, 'prev_id')
+        header.insert(24, 'prev_skuId')
+        header.insert(25, 'prev_RPC')
+        header.insert(26, 'id')
+        header.insert(27, 'skuId')
+        header.insert(28, 'RPC')
+        output.append(header)
+
+        for line in reader:
+            skuid, id, rpc = parse_url(line[3])
+            cur.execute('select skuid, id, rpc from ads7 where id=:id', {'id':id})
+            prev_skuid, prev_id, prev_rpc = cur.fetchone()
+            line.insert(23, prev_id)
+            line.insert(24, prev_skuid)
+            line.insert(25, prev_rpc)
+            line.insert(26, id)
+            line.insert(27, skuid)
+            line.insert(28, rpc)
+            output.append(line)
+
+    con.close()
+
+    # write output
+    import os
+    fn, ext = os.path.splitext(csv_file_path)
+    output_file_path = fn + '_out' + ext
+
+    with open(output_file_path, 'wb') as fout:
+        writer = csv.writer(fout)
+        for line in output:
+            writer.writerow(line)
+
+
+
+
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-csvToDb('f:\\Tmall_Skii_by_brand.csv')
+#csv_to_db('f:\\Tmall_Skii_by_brand.csv')
+analyse('f:\\Tmall_Skii_by_brand.csv')
+
+
