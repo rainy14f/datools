@@ -47,6 +47,18 @@ def analyse(file_path_prev, file_path):
     prev_id, prev_id_skuid, header = classify(file_path_prev)
     this_id, this_id_skuid, header = classify(file_path)
 
+    wrong_rows = []
+    for ref_row in prev_id:
+        if [row for row in prev_id_skuid if row[23] == ref_row[23]]:
+            wrong_rows.append(ref_row)
+
+    if wrong_rows:
+        print 'Please review these rows (see IDs below):'
+        for r in wrong_rows:
+            print r[23]
+        return None, None
+
+
     prev_remove = []
     for prev_row in prev_id:
         if [row for row in this_id_skuid if row[23] == prev_row[23]]:
@@ -80,15 +92,13 @@ def write_file(file_path, lines):
             writer.writerow(line)
 
 
-
-
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 
-remove, add = analyse('f:\\Tmall_Dove_byCategory-2016-03.csv', 'f:\\Tmall_Dove_byCategory-2016-04.csv')
-write_file('f:\\out_remove.csv', remove)
-write_file('f:\\out_add.csv', add)
-
+remove, add = analyse('c:\\dev\\Tmall_Dove_byCategory_all.csv', 'c:\\dev\\Tmall_Dove_byCategory_2016-04.csv')
+if remove and add:
+    write_file('c:\\dev\\out_remove.csv', remove)
+    write_file('c:\\dev\\out_add.csv', add)
 
