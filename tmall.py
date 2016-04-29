@@ -52,11 +52,15 @@ def analyse(file_path_prev, file_path):
         if [row for row in prev_id_skuid if row[23] == ref_row[23]]:
             wrong_rows.append(ref_row)
 
+    for ref_row in prev_id_skuid:
+        if [row for row in prev_id if row[23] == ref_row[23]]:
+            wrong_rows.append(ref_row)
+
     if wrong_rows:
-        print 'Please review these rows (see IDs below):'
-        for r in wrong_rows:
-            print r[23]
-        return None, None
+        wrong_rows = sorted(wrong_rows, key=lambda row: row[23])
+        print 'Wrong rows (%d)' % len(wrong_rows)
+        wrong_rows.insert(0, header)
+        return None, None, wrong_rows
 
 
     prev_remove = []
@@ -82,7 +86,7 @@ def analyse(file_path_prev, file_path):
 
     prev_remove.insert(0, header)
     this_add.insert(0, header)
-    return prev_remove, this_add
+    return prev_remove, this_add, None
 
 
 def write_file(file_path, lines):
@@ -97,8 +101,10 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 
-remove, add = analyse('c:\\dev\\Tmall_Dove_byCategory_all.csv', 'c:\\dev\\Tmall_Dove_byCategory_2016-04.csv')
+remove, add, wrong = analyse('c:\\dev\\PG Tmall flagship.csv', 'c:\\dev\\Tmall_Dove_byCategory_2016-04.csv')
 if remove and add:
     write_file('c:\\dev\\out_remove.csv', remove)
     write_file('c:\\dev\\out_add.csv', add)
+if wrong:
+    write_file('c:\\dev\\out_wrong.csv', wrong)
 
